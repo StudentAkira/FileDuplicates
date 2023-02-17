@@ -5,7 +5,7 @@ import hashlib
 
 
 file_hashes = {}
-repeated_files_pathes = []
+repeated_files_pathes = {}
 
 start = time.time()
 
@@ -20,13 +20,14 @@ def foo(folder_path):
                 with open(root+'\\'+file,'rb')as f:
                     hs = f.read()
                     if not file_hashes.get(hs):
-                        file_hashes[hs] = 1
+                        file_hashes[hs] = [root+'\\'+file]
                         continue
-                    file_hashes[hs] += 1
-                    repeated_files_pathes.append(root + '\\' + file)
+                    file_hashes[hs].append(root+'\\'+file)
+                    repeated_files_pathes[hs] = 1
             except:
                 hs = 'ERROR'
-    print(repeated_files_pathes)
+    for key in repeated_files_pathes.keys():
+        print(file_hashes[key])
 
 foo(input('enter_folder_path :: '))
 
