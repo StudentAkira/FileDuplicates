@@ -27,7 +27,10 @@ def foo(folder_path):
             except:
                 hs = 'ERROR'
     for key in repeated_files_pathes.keys():
-        print(file_hashes[key])
+        print('Files with hash :: ', key[:30:], '...')
+        for filename in file_hashes[key]:
+            print('\t'+filename)
+        print('')
 
 foo(input('enter_folder_path :: '))
 
