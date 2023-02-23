@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 from tkinter.filedialog import askdirectory, askopenfile
 import socket
@@ -20,12 +21,33 @@ class MainWindow:
         self.needed_file_path_label = tk.Label(text='')
         self.needed_directory_path_label = tk.Label(text='')
 
+        self.remote_file_dialog = tk.Listbox()
+        self.remote_file_dialog.insert(-1, 'C:\\')
+        self.remote_file_dialog.bind("<Double-Button-1>", lambda _: print(self.get_selected()))
+
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect(('192.168.100.25', 5555))
+
+    def get_selected(self):
+
+        selected_item = self.remote_file_dialog.get(self.remote_file_dialog.curselection())
+        self.client_socket.send(selected_item.encode('utf-8'))
+        print('recv')
+        response = self.client_socket.recv(1024)
+        print('send')
+        dirs = response.decode().split(':')
+        for i in range(len(dirs)):
+            self.remote_file_dialog.insert(i+1, '   ' + dirs[i])
+
+
+
     def run_app(self):
 
         self.open_needed_file_path_button.pack()
         self.open_needed_directory_path_button.pack()
         self.search_button.pack()
         self.request_button.pack()
+        self.remote_file_dialog.pack()
         self.root.mainloop()
 
     def get_needed_file_path(self):
@@ -71,9 +93,7 @@ class MainWindow:
 
     def request(self):
         try:
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect(('192.168.100.25', 5555))
-            client_socket.send(b'Vlad here')
+            self.client_socket.send(b'Vlad here')
         except:
             pass
 
