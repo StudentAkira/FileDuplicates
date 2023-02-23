@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter.filedialog import askdirectory, askopenfile
+import socket
 import os
 
 
@@ -14,6 +15,7 @@ class MainWindow:
         self.open_needed_file_path_button = tk.Button(self.root, text="Chose file", command=self.get_needed_file_path)
         self.open_needed_directory_path_button = tk.Button(self.root, text="Chose directory", command=self.get_needed_directory_path)
         self.search_button = tk.Button(self.root, text="SEARCH", command=self.search)
+        self.request_button = tk.Button(self.root, text="REQUEST", command=self.request)
 
         self.needed_file_path_label = tk.Label(text='')
         self.needed_directory_path_label = tk.Label(text='')
@@ -23,6 +25,7 @@ class MainWindow:
         self.open_needed_file_path_button.pack()
         self.open_needed_directory_path_button.pack()
         self.search_button.pack()
+        self.request_button.pack()
         self.root.mainloop()
 
     def get_needed_file_path(self):
@@ -65,6 +68,14 @@ class MainWindow:
         with open('result.txt', 'w') as f:
             for item in repeated_files_pathes:
                 f.write(item+'\n')
+
+    def request(self):
+        try:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect(('192.168.100.25', 5555))
+            client_socket.send(b'Vlad here')
+        except:
+            pass
 
 
 window = MainWindow()
