@@ -12,12 +12,17 @@ def event_loop():
     while True:
         ready_to_read, ready_to_write, _ = select(list(to_read), list(to_write), [])
 
+        if len(ready_to_write) == len(ready_to_read) \
+            and ready_to_write[0] == ready_to_read[0]:
+            continue
         for sock in ready_to_write:
             received_data = requests[sock].decode()
             print(received_data)
             for _, directories, _ in os.walk(received_data):
                 answer = ''.join([x + ':' for x in directories]).encode()
                 print(answer)
+                if not answer:
+                    answer = b'EMPTY FOLDER'
                 sock.send(answer)
                 break
 
@@ -29,9 +34,12 @@ def event_loop():
                 print(addr, 'connected')
                 to_read[client_socket] = client_socket
                 continue
-            data = sock.recv(1024)
-            to_write[sock] = sock
-            requests[sock] = data
+            try:
+                data = sock.recv(1024)
+                to_write[sock] = sock
+                requests[sock] = data
+            except:
+                del to_read[sock]
 
 
 requests = {}

@@ -1,1 +1,2 @@
+func-timeout==4.3.5
 tk==0.1.0

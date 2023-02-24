@@ -1,4 +1,3 @@
-import sys
 import tkinter as tk
 from tkinter.filedialog import askdirectory, askopenfile
 import socket
@@ -16,7 +15,7 @@ class MainWindow:
         self.open_needed_file_path_button = tk.Button(self.root, text="Chose file", command=self.get_needed_file_path)
         self.open_needed_directory_path_button = tk.Button(self.root, text="Chose directory", command=self.get_needed_directory_path)
         self.search_button = tk.Button(self.root, text="SEARCH", command=self.search)
-        self.request_button = tk.Button(self.root, text="REQUEST", command=self.request)
+        self.request_button = tk.Button(self.root, text="REQUEST")
 
         self.needed_file_path_label = tk.Label(text='')
         self.needed_directory_path_label = tk.Label(text='')
@@ -27,15 +26,32 @@ class MainWindow:
 
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect(('localhost', 5555))
+        self.client_socket.settimeout(0.5)
 
     def get_selected(self):
 
+        print(self.remote_file_dialog.curselection())
         selected_item = self.remote_file_dialog.get(self.remote_file_dialog.curselection())
-        self.client_socket.send(selected_item.encode('utf-8'))
-        response = self.client_socket.recv(1024)
+        request = ''.join((filter(lambda char: char != '-', selected_item))).encode('utf-8')
+        print('request :: ', request)
+        self.client_socket.send(request)
+
+        try:
+            response = self.client_socket.recv(1024)
+        except:
+            response = b'EMPTY FOLDER'
+
+        print('response :: ', response)
+        if response.decode() == 'EMPTY FOLDER':
+            print('empty Folder')
+            return
         dirs = response.decode().split(':')
-        for i in range(len(dirs)):
-            self.remote_file_dialog.insert(i+1, '   ' + dirs[i])
+        needed_spaces = selected_item.count('\\')
+        for i in range(len(dirs) - 1):
+            self.remote_file_dialog.insert(
+                self.remote_file_dialog.curselection()[0] + i + 1,
+                needed_spaces*'-'+selected_item+dirs[i]+'\\'
+            )
 
     def run_app(self):
 
@@ -86,12 +102,6 @@ class MainWindow:
         with open('result.txt', 'w') as f:
             for item in repeated_files_pathes:
                 f.write(item+'\n')
-
-    def request(self):
-        try:
-            self.client_socket.send(b'Vlad here')
-        except:
-            pass
 
 
 window = MainWindow()
