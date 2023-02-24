@@ -23,23 +23,19 @@ class MainWindow:
 
         self.remote_file_dialog = tk.Listbox()
         self.remote_file_dialog.insert(-1, 'C:\\')
-        self.remote_file_dialog.bind("<Double-Button-1>", lambda _: print(self.get_selected()))
+        self.remote_file_dialog.bind("<Double-Button-1>", lambda _: self.get_selected())
 
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect(('192.168.100.25', 5555))
+        self.client_socket.connect(('localhost', 5555))
 
     def get_selected(self):
 
         selected_item = self.remote_file_dialog.get(self.remote_file_dialog.curselection())
         self.client_socket.send(selected_item.encode('utf-8'))
-        print('recv')
         response = self.client_socket.recv(1024)
-        print('send')
         dirs = response.decode().split(':')
         for i in range(len(dirs)):
             self.remote_file_dialog.insert(i+1, '   ' + dirs[i])
-
-
 
     def run_app(self):
 
