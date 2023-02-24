@@ -1,3 +1,4 @@
+import hashlib
 import tkinter as tk
 from tkinter.filedialog import askdirectory, askopenfile
 import socket
@@ -15,7 +16,7 @@ class MainWindow:
         self.open_needed_file_path_button = tk.Button(self.root, text="Chose file", command=self.get_needed_file_path)
         self.open_needed_directory_path_button = tk.Button(self.root, text="Chose directory", command=self.get_needed_directory_path)
         self.search_button = tk.Button(self.root, text="SEARCH", command=self.search)
-        self.request_button = tk.Button(self.root, text="REQUEST")
+        self.request_button = tk.Button(self.root, text="REQUEST", command=self.get_file_size)
 
         self.needed_file_path_label = tk.Label(text='')
         self.needed_directory_path_label = tk.Label(text='')
@@ -23,27 +24,33 @@ class MainWindow:
         self.remote_file_dialog = tk.Listbox()
         self.remote_file_dialog.insert(-1, 'C:\\')
         self.remote_file_dialog.bind("<Double-Button-1>", lambda _: self.get_selected())
+        self.remote_file_dialog.bind("<<ListboxSelect>>", lambda _: self.set_current_needed_directory_path())
 
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect(('localhost', 5555))
         self.client_socket.settimeout(0.5)
 
+    def set_current_needed_directory_path(self):
+        selected_item = self.remote_file_dialog.get(self.remote_file_dialog.curselection())
+        self.needed_directory_path = ''.join(filter(lambda char: char != '-', selected_item))
+        print(self.needed_directory_path)
+
     def get_selected(self):
 
         print(self.remote_file_dialog.curselection())
         selected_item = self.remote_file_dialog.get(self.remote_file_dialog.curselection())
-        request = ''.join((filter(lambda char: char != '-', selected_item))).encode('utf-8')
+        request = ('GET_FOLDER ' + ''.join(filter(lambda char: char != '-', selected_item))).encode('utf-8')
         print('request :: ', request)
         self.client_socket.send(request)
 
         try:
             response = self.client_socket.recv(1024)
         except:
-            response = b'EMPTY FOLDER'
+            response = b'EMPTY or UNREACHABLE FOLDER'
 
         print('response :: ', response)
-        if response.decode() == 'EMPTY FOLDER':
-            print('empty Folder')
+        if response == b'EMPTY or UNREACHABLE FOLDER':
+            print('EMPTY or UNREACHABLE FOLDER')
             return
         dirs = response.decode().split(':')
         needed_spaces = selected_item.count('\\')
@@ -73,6 +80,18 @@ class MainWindow:
         self.needed_directory_path_label.destroy()
         self.needed_directory_path_label = tk.Label(text=self.needed_directory_path)
         self.needed_directory_path_label.pack()
+
+    def get_file_size(self):
+        print(os.path.getsize(self.needed_file_path))
+        with open(self.needed_file_path, 'rb') as file:
+            hs = hashlib.sha256(file.read()).hexdigest()
+            file_bytes = b'SEARCH_DUPLICATE ' + (self.needed_directory_path + ' ' + hs).encode()
+        self.client_socket.send(file_bytes)
+        try:
+            response = self.client_socket.recv(1024)
+        except:
+            response = b'TOO LOG REQUEST'
+        print(response)
 
     def search(self):
 
