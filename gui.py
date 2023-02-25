@@ -1,8 +1,29 @@
 import hashlib
 import tkinter as tk
-from tkinter.filedialog import askdirectory, askopenfile
+from tkinter.filedialog import askopenfile
 import socket
-import os
+
+
+def normalize_response(response):
+    if response == 'TOO LOG REQUEST':
+        return response
+    normalized_response = ''
+    i = 0
+    while i <= len(response) - 1:
+        if response[i] == '\\':
+            normalized_response += '\\'
+            while response[i] == '\\':
+                i += 1
+                if i > len(response):
+                    return normalized_response
+            continue
+        if response[i] == ' ':
+            normalized_response += '\n'
+            i += 1
+            continue
+        normalized_response += response[i]
+        i += 1
+    return normalized_response
 
 
 class MainWindow:
@@ -14,16 +35,14 @@ class MainWindow:
         self.needed_directory_path = ''
 
         self.open_needed_file_path_button = tk.Button(self.root, text="Chose file", command=self.get_needed_file_path)
-        self.open_needed_directory_path_button = tk.Button(self.root, text="Chose directory", command=self.get_needed_directory_path)
-        self.search_button = tk.Button(self.root, text="SEARCH", command=self.search)
-        self.request_button = tk.Button(self.root, text="REQUEST", command=self.get_file_size)
+        self.request_button = tk.Button(self.root, text="SEARCH", command=self.search_duplicates_request)
 
         self.needed_file_path_label = tk.Label(text='')
-        self.needed_directory_path_label = tk.Label(text='')
+        self.answer_label = tk.Label()
 
-        self.remote_file_dialog = tk.Listbox()
+        self.remote_file_dialog = tk.Listbox(width=100)
         self.remote_file_dialog.insert(-1, 'C:\\')
-        self.remote_file_dialog.bind("<Double-Button-1>", lambda _: self.get_selected())
+        self.remote_file_dialog.bind("<Double-Button-1>", lambda _: self.get_selected_folder_content())
         self.remote_file_dialog.bind("<<ListboxSelect>>", lambda _: self.set_current_needed_directory_path())
 
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -35,7 +54,7 @@ class MainWindow:
         self.needed_directory_path = ''.join(filter(lambda char: char != '-', selected_item))
         print(self.needed_directory_path)
 
-    def get_selected(self):
+    def get_selected_folder_content(self):
 
         print(self.remote_file_dialog.curselection())
         selected_item = self.remote_file_dialog.get(self.remote_file_dialog.curselection())
@@ -45,7 +64,7 @@ class MainWindow:
 
         try:
             response = self.client_socket.recv(1024)
-        except:
+        except socket.timeout:
             response = b'EMPTY or UNREACHABLE FOLDER'
 
         print('response :: ', response)
@@ -61,66 +80,34 @@ class MainWindow:
             )
 
     def run_app(self):
-
-        self.open_needed_file_path_button.pack()
-        self.open_needed_directory_path_button.pack()
-        self.search_button.pack()
-        self.request_button.pack()
-        self.remote_file_dialog.pack()
+        self.open_needed_file_path_button.place(x=20, y=20)
+        self.request_button.place(x=20, y=50)
+        self.remote_file_dialog.place(x=50, y=100)
         self.root.mainloop()
 
     def get_needed_file_path(self):
         self.needed_file_path = askopenfile().name
         self.needed_file_path_label.destroy()
         self.needed_file_path_label = tk.Label(text=self.needed_file_path)
-        self.needed_file_path_label.pack()
+        self.needed_file_path_label.place(x=100, y=20)
 
-    def get_needed_directory_path(self):
-        self.needed_directory_path = askdirectory()
-        self.needed_directory_path_label.destroy()
-        self.needed_directory_path_label = tk.Label(text=self.needed_directory_path)
-        self.needed_directory_path_label.pack()
-
-    def get_file_size(self):
-        print(os.path.getsize(self.needed_file_path))
-        with open(self.needed_file_path, 'rb') as file:
-            hs = hashlib.sha256(file.read()).hexdigest()
-            file_bytes = b'SEARCH_DUPLICATE ' + (self.needed_directory_path + ' ' + hs).encode()
+    def search_duplicates_request(self):
+        try:
+            with open(self.needed_file_path, 'rb') as file:
+                hs = hashlib.sha256(file.read()).hexdigest()
+                file_bytes = b'SEARCH_DUPLICATE ' + (self.needed_directory_path + ' ' + hs).encode()
+        except FileNotFoundError:
+            return
         self.client_socket.send(file_bytes)
         try:
             response = self.client_socket.recv(1024)
-        except:
+        except socket.timeout:
             response = b'TOO LOG REQUEST'
-        print(response)
+        normalized_response = 'DUPLICATES ARE :: \n' + normalize_response(response.decode())
 
-    def search(self):
-
-        file_hashes = {}
-        repeated_files_pathes = []
-
-        with open(self.needed_file_path, 'rb') as f:
-            hs = f.read()
-            file_hashes[hs] = self.needed_directory_path
-
-        normalized_needed_directory_path = ''.join([x if x != '/' else '\\' for x in self.needed_directory_path])
-        normalized_needed_file_path = ''.join([x if x != '/' else '\\' for x in self.needed_file_path])
-
-        for root, dirs, files in os.walk(normalized_needed_directory_path):
-            for file in files:
-
-                if (root + '\\' + file) == normalized_needed_file_path:
-                    continue
-                try:
-                    with open(root + '\\' + file, 'rb') as f:
-                        hs = f.read()
-                        if file_hashes.get(hs):
-                            repeated_files_pathes.append(root + '\\' + file)
-                except PermissionError:
-                    pass
-
-        with open('result.txt', 'w') as f:
-            for item in repeated_files_pathes:
-                f.write(item+'\n')
+        self.answer_label.destroy()
+        self.answer_label = tk.Label(text=normalized_response)
+        self.answer_label.place(x=20, y=300)
 
 
 window = MainWindow()
