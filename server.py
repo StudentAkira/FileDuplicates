@@ -9,15 +9,34 @@ server_socket.listen()
 
 
 def get_folder(path):
-    if not path:
-        return b'INVALID REQUEST'
     answer = ''
+
     for _, directories, _ in os.walk(path):
-        answer = ''.join([x + ':' for x in directories]).encode()
+        answer = ''.join([x + '-' for x in directories]).encode()
         break
     if not answer:
         return b'EMPTY or UNREACHABLE FOLDER'
     return answer
+
+
+def normalize_response(response):
+    normalized_response = ''
+    i = 0
+    while i <= len(response) - 1:
+        if response[i] == '\\':
+            normalized_response += '\\'
+            while response[i] == '\\':
+                i += 1
+                if i > len(response):
+                    return normalized_response
+            continue
+        if response[i] == ' ':
+            normalized_response += '\n'
+            i += 1
+            continue
+        normalized_response += response[i]
+        i += 1
+    return normalized_response
 
 
 def search_duplicate(file_hs, needed_directory_path):
@@ -35,7 +54,9 @@ def search_duplicate(file_hs, needed_directory_path):
                         repeated_files_paths.append(root + '\\' + file)
             except PermissionError:
                 pass
-    answer = (' '.join(repeated_files_paths)).encode()
+    for i in range(len(repeated_files_paths)):
+        repeated_files_paths[i] = normalize_response(repeated_files_paths[i])
+    answer = ('-'.join(repeated_files_paths)).encode()
     return answer if answer else b'NO DUPLICATES FOUNDED'
 
 
@@ -73,7 +94,10 @@ def event_loop():
                     answer = b'INVALID REQUEST'
             except IndexError:
                 answer = b'ERROR'
-            sock.send(answer)
+            try:
+                sock.send(answer)
+            except ConnectionAbortedError:
+                pass
             del to_write[sock]
         for sock in ready_to_read:
             if sock == server_socket:
@@ -85,7 +109,7 @@ def event_loop():
                 data = sock.recv(1024)
                 to_write[sock] = sock
                 requests[sock] = data
-            except ConnectionAbortedError:
+            except:
                 del to_read[sock]
 
 

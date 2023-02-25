@@ -4,28 +4,6 @@ from tkinter.filedialog import askopenfile
 import socket
 
 
-def normalize_response(response):
-    if response == 'TOO LOG REQUEST':
-        return response
-    normalized_response = ''
-    i = 0
-    while i <= len(response) - 1:
-        if response[i] == '\\':
-            normalized_response += '\\'
-            while response[i] == '\\':
-                i += 1
-                if i > len(response):
-                    return normalized_response
-            continue
-        if response[i] == ' ':
-            normalized_response += '\n'
-            i += 1
-            continue
-        normalized_response += response[i]
-        i += 1
-    return normalized_response
-
-
 class MainWindow:
 
     def __init__(self):
@@ -71,7 +49,9 @@ class MainWindow:
         if response == b'EMPTY or UNREACHABLE FOLDER':
             print('EMPTY or UNREACHABLE FOLDER')
             return
-        dirs = response.decode().split(':')
+        print('request :: ', request)
+        print('response :: ', response)
+        dirs = response.decode().split('-')
         needed_spaces = selected_item.count('\\')
         for i in range(len(dirs) - 1):
             self.remote_file_dialog.insert(
@@ -95,15 +75,19 @@ class MainWindow:
         try:
             with open(self.needed_file_path, 'rb') as file:
                 hs = hashlib.sha256(file.read()).hexdigest()
-                file_bytes = b'SEARCH_DUPLICATE ' + (self.needed_directory_path + ' ' + hs).encode()
+                request = b'SEARCH_DUPLICATE ' + (self.needed_directory_path + ' ' + hs).encode()
         except FileNotFoundError:
             return
-        self.client_socket.send(file_bytes)
+        self.client_socket.send(request)
         try:
             response = self.client_socket.recv(1024)
         except socket.timeout:
             response = b'TOO LOG REQUEST'
-        normalized_response = 'DUPLICATES ARE :: \n' + normalize_response(response.decode())
+
+        normalized_response = 'DUPLICATES ARE :: \n' + '\n'.join(response.decode().split('-'))
+
+        print(request)
+        print(response)
 
         self.answer_label.destroy()
         self.answer_label = tk.Label(text=normalized_response)
