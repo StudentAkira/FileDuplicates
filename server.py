@@ -10,7 +10,6 @@ server_socket.listen()
 
 def get_folder(path):
     answer = ''
-
     for _, directories, _ in os.walk(path):
         answer = ''.join([x + '-' for x in directories]).encode()
         break
@@ -51,6 +50,7 @@ def search_duplicate(file_hs, needed_directory_path):
                     hs = hashlib.sha256(f.read()).hexdigest()
                     if file_hashes.get(hs):
                         print(hs)
+                        print(fr'{root}\{file}', 'CURRENT FILE PATH')
                         repeated_files_paths.append(root + '\\' + file)
             except PermissionError:
                 pass
@@ -58,6 +58,29 @@ def search_duplicate(file_hs, needed_directory_path):
         repeated_files_paths[i] = normalize_response(repeated_files_paths[i])
     answer = ('-'.join(repeated_files_paths)).encode()
     return answer if answer else b'NO DUPLICATES FOUNDED'
+
+
+def search_server_located_duplicate(needed_directory_path):
+    file_hashes = {}
+    result = []
+    normalized_needed_directory_path = ''.join([x if x != '/' else '\\' for x in needed_directory_path])
+
+    for root, dirs, files in os.walk(normalized_needed_directory_path):
+        for file in files:
+            try:
+                with open(root + '\\' + file, 'rb') as f:
+                    hs = hashlib.sha256(f.read()).hexdigest()
+                    if file_hashes.get(hs):
+                        file_hashes[hs].append(root + '\\' + file)
+                        continue
+                    file_hashes[hs] = [root + '\\' + file]
+            except PermissionError:
+                pass
+    for item in file_hashes.keys():
+        if len(file_hashes[item]) > 1:
+            result.append(file_hashes[item])
+
+    return result
 
 
 def event_loop():
@@ -82,6 +105,8 @@ def event_loop():
                 i += 1
                 print('request_type', request_type)
                 print('request_param', request_param)
+                if not request_param:
+                    raise Exception
                 if request_type == 'GET_FOLDER':
                     answer = get_folder(request_param)
                 elif request_type == 'SEARCH_DUPLICATE':
@@ -90,9 +115,18 @@ def event_loop():
                     file_hs = requests[sock][i::].decode()
                     print('file_bites', file_hs)
                     answer = search_duplicate(file_hs, needed_directory)
+                elif request_type == 'SEARCH_SERVER_LOCATED_DUPLICATES':
+                    duplicates = search_server_located_duplicate(request_param)
+                    answer = ''
+                    for duplicated_items in duplicates:
+                        for duplicate in duplicated_items:
+                            answer += normalize_response(duplicate) + '%'
+                        answer = answer[:-1:] + '--'
+                    print(answer)
+                    answer = answer[:-2:].encode()
                 else:
                     answer = b'INVALID REQUEST'
-            except IndexError:
+            except:
                 answer = b'ERROR'
             try:
                 sock.send(answer)

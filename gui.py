@@ -13,7 +13,8 @@ class MainWindow:
         self.needed_directory_path = ''
 
         self.open_needed_file_path_button = tk.Button(self.root, text="Chose file", command=self.get_needed_file_path)
-        self.request_button = tk.Button(self.root, text="SEARCH", command=self.search_duplicates_request)
+        self.request_with_selected_file_button = tk.Button(self.root, text="SEARCH client duplicates", command=self.search_client_duplicates_request)
+        self.request_without_selected_file_button = tk.Button(self.root, text="SEARCH server duplicates", command=self.search_server_duplicates_request)
 
         self.needed_file_path_label = tk.Label(text='')
         self.answer_label = tk.Label()
@@ -36,7 +37,11 @@ class MainWindow:
 
         print(self.remote_file_dialog.curselection())
         selected_item = self.remote_file_dialog.get(self.remote_file_dialog.curselection())
+
+        print(selected_item, 'selected item -------------', )
+
         request = ('GET_FOLDER ' + ''.join(filter(lambda char: char != '-', selected_item))).encode('utf-8')
+
         print('request :: ', request)
         self.client_socket.send(request)
 
@@ -61,7 +66,8 @@ class MainWindow:
 
     def run_app(self):
         self.open_needed_file_path_button.place(x=20, y=20)
-        self.request_button.place(x=20, y=50)
+        self.request_with_selected_file_button.place(x=20, y=50)
+        self.request_without_selected_file_button.place(x=200, y=50)
         self.remote_file_dialog.place(x=50, y=100)
         self.root.mainloop()
 
@@ -71,7 +77,7 @@ class MainWindow:
         self.needed_file_path_label = tk.Label(text=self.needed_file_path)
         self.needed_file_path_label.place(x=100, y=20)
 
-    def search_duplicates_request(self):
+    def search_client_duplicates_request(self):
         try:
             with open(self.needed_file_path, 'rb') as file:
                 hs = hashlib.sha256(file.read()).hexdigest()
@@ -91,6 +97,22 @@ class MainWindow:
 
         self.answer_label.destroy()
         self.answer_label = tk.Label(text=normalized_response)
+        self.answer_label.place(x=20, y=300)
+
+    def search_server_duplicates_request(self):
+        request = ('SEARCH_SERVER_LOCATED_DUPLICATES ' + self.needed_directory_path).encode()
+        self.client_socket.send(request)
+        response = self.client_socket.recv(1024).decode()
+
+        print(response)
+
+        result = []
+        for item in response.split('--'):
+            result.append('\n'.join(item.split('%')))
+        result = 'SERVER DUPLICATES ARE :: ' + '\n' + '\n\n'.join(result)
+
+        self.answer_label.destroy()
+        self.answer_label = tk.Label(text=result)
         self.answer_label.place(x=20, y=300)
 
 

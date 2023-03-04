@@ -33,3 +33,22 @@ examples:
 
 	request :: b'SEARCH_DUPLICATE C:\\test1\\ 701558a4de1fd6e411c82e6ee38df2683312b11c7270f9e99230ef79c987b419'
 	response :: b'NO DUPLICATES FOUNDED'
+
+
+SEARCH_SERVER_LOCATED_DUPLICATES
+
+Request of this type must contain 1 query param -  the folder where to serarch duplicated files
+Server response contains absolute pathes to duplicated files; 
+duplicated files of type1 are separeted by "%"; 
+files of type1 and type2 are separeted by "--";
+**suppose you have 4 files; 2 of them(type1 :: 1.txt, 2.txt) have same hash and those 2 left(type2 :: 3.txt, 4.txt) also have same hash -> (1.txt == 2.txt) != (3.txt == 4.txt)
+
+ecamples:
+	request :: b'SEARCH_SERVER_LOCATED_DUPLICATES C:\\test1\\'
+	response :: b'C:\test1\photo_2023-02-16_18-04-33.jpg%C:\test1\test2\photo_2023-02-16_18-04-33.jpg--C:\test1\t.jpg%C:\test1\test2\test3\CHiUyAcWUFg.jpg' 
+
+	request :: b'SEARCH_SERVER_LOCATED_DUPLICATES '
+	response :: b'ERROR'
+
+	request :: b'SEARCH_SERVER_LOCA '
+	response :: b'ERROR'
