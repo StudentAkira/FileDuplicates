@@ -20,7 +20,9 @@ examples:
 
 
 
-SEARCH_DUPLICATE
+SEARCH_CLIENT_SENT_DUPLICATE
+
+Client send a file and server search for files that match this file 
 
 Request of this type must contains 2 query params - the folder where to serarch files, file hash(sha256) in human readble representaton 
 **such representatoncan be created by hashlib.sha256(file.read()).hexdigest(); 
@@ -28,22 +30,25 @@ hashlib.sha256(file.read()).hexdigest() - this value will be used on server to c
 Response contains aubsolute paths of matchly files separeted by symbol "-"; 
 
 examples:
-	request  :: b'SEARCH_DUPLICATE C:\\test1\\ 93a74f25473f69161daae708270a28763e22f3314533955a2b2277a22ef1d95e'
+	request  :: b'SEARCH_CLIENT_SENT_DUPLICATE C:\\test1\\ 93a74f25473f69161daae708270a28763e22f3314533955a2b2277a22ef1d95e'
 	response :: b'C:\\test1\\t.jpg-C:\\test1\\test2\\test3\\CHiUyAcWUFg.jpg'
 
-	request :: b'SEARCH_DUPLICATE C:\\test1\\ 701558a4de1fd6e411c82e6ee38df2683312b11c7270f9e99230ef79c987b419'
+	request :: b'SEARCH_CLIENT_SENT_DUPLICATE C:\\test1\\ 701558a4de1fd6e411c82e6ee38df2683312b11c7270f9e99230ef79c987b419'
 	response :: b'NO DUPLICATES FOUNDED'
 
 
 SEARCH_SERVER_LOCATED_DUPLICATES
+
+Client chuse server located folder and server serching for duplicates in this folders & sub-folders
 
 Request of this type must contain 1 query param -  the folder where to serarch duplicated files
 Server response contains absolute pathes to duplicated files; 
 duplicated files of type1 are separeted by "%"; 
 files of type1 and type2 are separeted by "--";
 **suppose you have 4 files; 2 of them(type1 :: 1.txt, 2.txt) have same hash and those 2 left(type2 :: 3.txt, 4.txt) also have same hash -> (1.txt == 2.txt) != (3.txt == 4.txt)
+in case if chosen folder size above 1MB server response will be b'TOO LONG REQUEST'
 
-ecamples:
+examples:
 	request :: b'SEARCH_SERVER_LOCATED_DUPLICATES C:\\test1\\'
 	response :: b'C:\test1\photo_2023-02-16_18-04-33.jpg%C:\test1\test2\photo_2023-02-16_18-04-33.jpg--C:\test1\t.jpg%C:\test1\test2\test3\CHiUyAcWUFg.jpg' 
 
@@ -52,3 +57,20 @@ ecamples:
 
 	request :: b'SEARCH_SERVER_LOCA '
 	response :: b'ERROR'
+
+
+SEARCH_CLIENT_CHOSEN_DUPLICATE
+
+Client chuse file and folder (both located on server), server seraching for dulicates of this file in this folder & sub-folders
+Request of this type must contain 2 query param separated by "%" -  file , folder where to serarch duplicated files;
+Server response contains absolute pathes to duplicated files separeted by "-";
+
+
+examples:
+	request :: b'SEARCH_CLIENT_CHOSEN_DUPLICATE C:\\test1\\photo_2023-02-16_18-04-33.jpg\\%C:\\test1\\'
+	response :: b'C:\\test1\\photo_2023-02-16_18-04-33.jpg-C:\\test1\\test2\\photo_2023-02-16_18-04-33.jpg'
+ 
+	request :: b'SEARCH_CLIENT_CHOSEN_DUPLICATE C:\\test1\\photo_2023-02-16_18-04-33.jpg\\%C:\\MinGW\\test3\\bin\\'
+	response :: b'EMPTY or UNREACHABLE FOLDER'
+	
+
